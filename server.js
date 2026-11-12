@@ -24,12 +24,26 @@ const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 function fetchRates() {
   return new Promise((resolve) => {
     const url = 'https://api.frankfurter.dev/latest?from=EUR&to=USD,JPY,GBP,CNY';
-    https.get(url, (res) => {
+    console.log(`Fetching rates from ${url}...`);
+
+    https.get(url, { timeout: 10000 }, (res) => {
+      console.log(`Response status: ${res.statusCode}`);
+
+      if (res.statusCode !== 200) {
+        console.error(`API returned status ${res.statusCode}`);
+        fetchError = `API error: ${res.statusCode}`;
+        return resolve(ratesCache || {});
+      }
+
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
+          if (!json.rates) {
+            throw new Error('No rates in response');
+          }
+
           // Convert to our format: { code: rate, ... }
           const rates = { EUR: 1 }; // EUR is always the base
           Object.entries(json.rates).forEach(([code, rate]) => {
@@ -38,16 +52,16 @@ function fetchRates() {
           ratesCache = rates;
           lastFetchTime = Date.now();
           fetchError = null;
-          console.log('Rates cached successfully:', rates);
+          console.log('✓ Rates fetched successfully:', rates);
           resolve(rates);
         } catch (err) {
-          console.error('Parse error:', err.message);
+          console.error('✗ Parse error:', err.message);
           fetchError = 'Failed to parse rates';
           resolve(ratesCache || {});
         }
       });
     }).on('error', (err) => {
-      console.error('Fetch error:', err.message);
+      console.error('✗ Network error:', err.message);
       fetchError = 'Failed to fetch rates from API';
       resolve(ratesCache || {});
     });
@@ -56,7 +70,7 @@ function fetchRates() {
 
 // Refresh rates if cache expired
 async function ensureRatesValid() {
-  if (!ratesCache || Date.now() - lastFetchTime > CACHE_DURATION) {
+  if (!ratesCache || !lastFetchTime || Date.now() - lastFetchTime > CACHE_DURATION) {
     await fetchRates();
   }
 }
