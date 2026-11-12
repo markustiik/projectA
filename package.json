@@ -1,0 +1,15 @@
+{
+  "name": "currency-converter",
+  "version": "1.0.0",
+  "description": "Simple 5-currency converter with live conversion",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["currency", "converter", "exchange"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
