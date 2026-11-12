@@ -1,9 +1,11 @@
 const express = require('express');
 const https = require('https');
 const path = require('path');
+const { PrismaClient } = require('@prisma/client');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const prisma = new PrismaClient();
 
 // Currencies: code, flag, name
 const CURRENCIES = {
@@ -82,6 +84,42 @@ app.get('/api/rates', async (req, res) => {
     timestamp: lastFetchTime,
     error: fetchError
   });
+});
+
+// API endpoint: save conversion to database
+app.post('/api/conversions', express.json(), async (req, res) => {
+  try {
+    const { amount, fromCurrency, toCurrency, result, exchangeRate } = req.body;
+
+    const conversion = await prisma.conversion.create({
+      data: {
+        amount: parseFloat(amount),
+        fromCurrency,
+        toCurrency,
+        result: parseFloat(result),
+        exchangeRate: parseFloat(exchangeRate)
+      }
+    });
+
+    res.json({ success: true, id: conversion.id });
+  } catch (err) {
+    console.error('Error saving conversion:', err.message);
+    res.status(500).json({ error: 'Failed to save conversion' });
+  }
+});
+
+// API endpoint: get conversion history
+app.get('/api/conversions', async (req, res) => {
+  try {
+    const conversions = await prisma.conversion.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+    res.json(conversions);
+  } catch (err) {
+    console.error('Error fetching conversions:', err.message);
+    res.status(500).json({ error: 'Failed to fetch conversions' });
+  }
 });
 
 // Serve static frontend

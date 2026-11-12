@@ -138,8 +138,28 @@ function convert() {
     timestamp.textContent = `Updated ${timeString}`;
   }
 
+  // Save conversion to database if amount is greater than 0
+  if (amount > 0) {
+    saveConversion(amount, fromCurrency, toCurrency, converted, rateValue);
+  }
+
   // Update conversion table
   updateConversionTable(amount, fromCurrency);
+}
+
+// Save conversion to database
+function saveConversion(amount, fromCurrency, toCurrency, result, exchangeRate) {
+  fetch('/api/conversions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amount,
+      fromCurrency,
+      toCurrency,
+      result,
+      exchangeRate
+    })
+  }).catch(err => console.error('Error saving conversion:', err));
 }
 
 // Update the conversion table showing all 5 currencies

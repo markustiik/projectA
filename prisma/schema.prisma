@@ -1,0 +1,18 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Conversion {
+  id            Int       @id @default(autoincrement())
+  amount        Float
+  fromCurrency  String
+  toCurrency    String
+  result        Float
+  exchangeRate  Float
+  createdAt     DateTime  @default(now())
+}
