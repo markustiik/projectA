@@ -21,51 +21,40 @@ let fetchError = null;
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 
 // Fetch rates from Frankfurter API
-function fetchRates() {
-  return new Promise((resolve) => {
-    const url = 'https://api.frankfurter.dev/latest?from=EUR&to=USD,JPY,GBP,CNY';
-    console.log(`Fetching rates from ${url}...`);
+async function fetchRates() {
+  const url = 'https://api.frankfurter.app/latest?from=EUR&to=USD,JPY,GBP,CNY';
+  console.log(`Fetching rates from ${url}...`);
 
-    https.get(url, { timeout: 10000 }, (res) => {
-      console.log(`Response status: ${res.statusCode}`);
+  try {
+    const response = await fetch(url, { timeout: 10000 });
+    console.log(`Response status: ${response.status}`);
 
-      if (res.statusCode !== 200) {
-        console.error(`API returned status ${res.statusCode}`);
-        fetchError = `API error: ${res.statusCode}`;
-        return resolve(ratesCache || {});
-      }
+    if (!response.ok) {
+      console.error(`API returned status ${response.status}`);
+      fetchError = `API error: ${response.status}`;
+      return ratesCache || {};
+    }
 
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (!json.rates) {
-            throw new Error('No rates in response');
-          }
+    const json = await response.json();
+    if (!json.rates) {
+      throw new Error('No rates in response');
+    }
 
-          // Convert to our format: { code: rate, ... }
-          const rates = { EUR: 1 }; // EUR is always the base
-          Object.entries(json.rates).forEach(([code, rate]) => {
-            rates[code] = rate;
-          });
-          ratesCache = rates;
-          lastFetchTime = Date.now();
-          fetchError = null;
-          console.log('✓ Rates fetched successfully:', rates);
-          resolve(rates);
-        } catch (err) {
-          console.error('✗ Parse error:', err.message);
-          fetchError = 'Failed to parse rates';
-          resolve(ratesCache || {});
-        }
-      });
-    }).on('error', (err) => {
-      console.error('✗ Network error:', err.message);
-      fetchError = 'Failed to fetch rates from API';
-      resolve(ratesCache || {});
+    // Convert to our format: { code: rate, ... }
+    const rates = { EUR: 1 }; // EUR is always the base
+    Object.entries(json.rates).forEach(([code, rate]) => {
+      rates[code] = rate;
     });
-  });
+    ratesCache = rates;
+    lastFetchTime = Date.now();
+    fetchError = null;
+    console.log('✓ Rates fetched successfully:', rates);
+    return rates;
+  } catch (err) {
+    console.error('✗ Error fetching rates:', err.message);
+    fetchError = `Error: ${err.message}`;
+    return ratesCache || {};
+  }
 }
 
 // Refresh rates if cache expired
